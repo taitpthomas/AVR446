@@ -10,6 +10,20 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/mman.h>
+#include <inttypes.h>
+#include <sys/io.h>
+#include <signal.h>
+
+#define BASE 0x378
+#define OUTB(a)	do { outb((a), BASE); } while (0)
+
+int running = 1;
+
+void signalHandler(int sig)
+{
+	running = 0;
+}
+
 
 struct period_info {
         struct timespec next_period;
@@ -38,6 +52,7 @@ static void periodic_task_init(struct period_info *pinfo)
 static void do_rt_task()
 {
         /* Do RT stuff here. */
+	printf(".\n");
 }
  
 static void wait_rest_of_period(struct period_info *pinfo)
@@ -51,11 +66,16 @@ static void wait_rest_of_period(struct period_info *pinfo)
 void *simple_cyclic_task(void *data)
 {
         struct period_info pinfo;
- 
+	int count = 0;
+	
+	printf("%s started\n", __FUNCTION__);	 
         periodic_task_init(&pinfo);
- 
-        while (1) {
-                do_rt_task();
+        while (running){
+		count++;
+                if (count > 1000){
+			do_rt_task();
+			count = 0;
+		}
                 wait_rest_of_period(&pinfo);
         }
  
@@ -68,13 +88,27 @@ int main(int argc, char* argv[])
         pthread_attr_t attr;
         pthread_t thread;
         int ret;
- 
+	
+	/* initialize parallel port */
+	printf("Parallel Port Interface (Base: 0x%x)\n", BASE);
+	
+	// Set permission bits of 4 ports starting from BASE
+	if (ioperm(BASE, 4, 1) != 0){
+		printf("ERROR: Could not set permissions on ports");
+		return 0;
+	}
+
+	/* ctrl-c handler */
+	signal(SIGINT, signalHandler);
+
         /* Lock memory */
         if(mlockall(MCL_CURRENT|MCL_FUTURE) == -1) {
                 printf("mlockall failed: %m\n");
+		// Clear permission bits of 4 ports starting from BASE
+		ioperm(BASE, 4, 0);
                 exit(-2);
         }
- 
+
         /* Initialize pthread attributes (default values) */
         ret = pthread_attr_init(&attr);
         if (ret) {
@@ -85,8 +119,8 @@ int main(int argc, char* argv[])
         /* Set a specific stack size  */
         ret = pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
         if (ret) {
-            printf("pthread setstacksize failed\n");
-            goto out;
+        	printf("pthread setstacksize failed\n");
+		goto out;
         }
  
         /* Set scheduler policy and priority of pthread */
@@ -121,6 +155,8 @@ int main(int argc, char* argv[])
                 printf("join pthread failed: %m\n");
  
 out:
+	// Clear permission bits of 4 ports starting from BASE
+	ioperm(BASE, 4, 0);
         return ret;
 }
 
