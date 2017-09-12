@@ -23,14 +23,13 @@
 
 #include "global.h"
 #include "speed_cntr.h"
-#include "uart.h"
-
-// Direction of stepper motor movement
-#define CW  0
-#define CCW 1
+#include "stdbool.h"
 
 //! Cointains data for timer interrupt.
 speedRampData srd;
+unsigned int OCR1A;	/* Output Compare Register */
+unsigned int TCCR1B;	/* Timer Counter Control Register */
+unsigned int TIMSK1;	/* Output Compare A Match Interrupt enable */
 
 /*! \brief Move the stepper motor a given number of steps.
  *
@@ -162,8 +161,8 @@ void speed_cntr_Init_Timer1(void)
  *  A new step delay is calculated to follow wanted speed profile
  *  on basis of accel/decel parameters.
  */
-#pragma vector=TIMER1_COMPA_vect
-__interrupt void speed_cntr_TIMER1_COMPA_interrupt( void )
+/* #pragma vector=TIMER1_COMPA_vect */
+/* __interrupt */int speed_cntr_TIMER1_COMPA_interrupt( void )
 {
   // Holds next delay period.
   unsigned int new_step_delay;
@@ -173,6 +172,8 @@ __interrupt void speed_cntr_TIMER1_COMPA_interrupt( void )
   static unsigned int step_count = 0;
   // Keep track of remainder from new_step-delay calculation to incrase accurancy
   static unsigned int rest = 0;
+  // sm_driver_StepCounter: -1 noaction, 0 CW, 1 CCW
+  int sm_driver_StepCounter = NOACTION;
 
   OCR1A = srd.step_delay;
 
@@ -186,7 +187,8 @@ __interrupt void speed_cntr_TIMER1_COMPA_interrupt( void )
       break;
 
     case ACCEL:
-      sm_driver_StepCounter(srd.dir);
+      /* sm_driver_StepCounter(srd.dir); */
+      sm_driver_StepCounter=srd.dir;
       step_count++;
       srd.accel_count++;
       new_step_delay = srd.step_delay - (((2 * (long)srd.step_delay) + rest)/(4 * srd.accel_count + 1));
@@ -206,7 +208,8 @@ __interrupt void speed_cntr_TIMER1_COMPA_interrupt( void )
       break;
 
     case RUN:
-      sm_driver_StepCounter(srd.dir);
+      /* sm_driver_StepCounter(srd.dir); */
+      sm_driver_StepCounter=srd.dir;
       step_count++;
       new_step_delay = srd.min_delay;
       // Chech if we should start decelration.
@@ -219,7 +222,8 @@ __interrupt void speed_cntr_TIMER1_COMPA_interrupt( void )
       break;
 
     case DECEL:
-      sm_driver_StepCounter(srd.dir);
+       /* sm_driver_StepCounter(srd.dir); */
+      sm_driver_StepCounter=srd.dir;
       step_count++;
       srd.accel_count++;
       new_step_delay = srd.step_delay - (((2 * (long)srd.step_delay) + rest)/(4 * srd.accel_count + 1));
@@ -231,6 +235,7 @@ __interrupt void speed_cntr_TIMER1_COMPA_interrupt( void )
       break;
   }
   srd.step_delay = new_step_delay;
+  return sm_driver_StepCounter;
 }
 
 /*! \brief Square root routine.

@@ -13,7 +13,14 @@
 #include <inttypes.h>
 #include <sys/io.h>
 #include <signal.h>
+#include <stdbool.h>
+#include "global.h"
+#include "speed_cntr.h"
 
+// Global status flags
+struct GLOBAL_FLAGS status = {FALSE, FALSE, 0};
+
+// Parallel Port
 #define BASE 0x378
 #define OUTB(a)	do { outb((a), BASE); } while (0)
 
@@ -49,12 +56,6 @@ static void periodic_task_init(struct period_info *pinfo)
         clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
 }
  
-static void do_rt_task()
-{
-        /* Do RT stuff here. */
-	printf(".\n");
-}
- 
 static void wait_rest_of_period(struct period_info *pinfo)
 {
         inc_period(pinfo);
@@ -67,13 +68,33 @@ void *simple_cyclic_task(void *data)
 {
         struct period_info pinfo;
 	int count = 0;
+	int rc;
+	int step_width = 0;
 	
 	printf("%s started\n", __FUNCTION__);	 
         periodic_task_init(&pinfo);
         while (running){
 		count++;
+		/* reset step clock pin to zero */
+		if (step_width > 0){
+			step_width--;
+			if (step_width == 0){
+				OUTB(0);
+			}
+		}
+		/* timer/counter compare output */
                 if (count > 1000){
-			do_rt_task();
+			/* do realtime task */
+			rc = speed_cntr_TIMER1_COMPA_interrupt();
+			switch(rc){
+				case NOACTION:
+					break;
+				case CW:
+				case CCW:
+					OUTB(0xff);
+					step_width = 100;
+					break;
+			}
 			count = 0;
 		}
                 wait_rest_of_period(&pinfo);

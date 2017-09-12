@@ -21,6 +21,12 @@
 #ifndef SPEED_CNTR_H
 #define SPEED_CNTR_H
 
+// Direction of stepper motor movement
+#define NOACTION -1
+#define CW  0
+#define CCW 1
+
+
 /*! \brief Holding data used by timer interrupt for speed ramp calculation.
  *
  *  Contains data used by timer interrupt to calculate speed profile.
@@ -89,7 +95,21 @@ void speed_cntr_Init_Timer1(void);
 static unsigned long my_sqrt(unsigned long v);
 unsigned int min(unsigned int x, unsigned int y);
 
+// realtime thread
+int speed_cntr_TIMER1_COMPA_interrupt( void );
+
 //! Global status flags
 extern struct GLOBAL_FLAGS status;
+extern unsigned int OCR1A;	/* Output Compare Register */
+extern unsigned int TCCR1B;	/* Timer Counter Control Register */
+
+// Timer Counter Control Register bits */
+#define WGM12 (12)
+#define CS10 (1<<0)
+#define CS11 (1<<1)
+#define CS12 (1<<2)
+
+extern unsigned int TIMSK1;	/* Output Compare A Match Interrupt enable */
+#define OCIE1A	(0)
 
 #endif
