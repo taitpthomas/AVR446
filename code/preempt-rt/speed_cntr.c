@@ -20,7 +20,8 @@
  * $RCSfile: speed_cntr.c,v $
  * $Date: 2006/05/08 12:25:58 $
  *****************************************************************************/
-
+#include <stdio.h>
+#include <stdlib.h>
 #include "global.h"
 #include "speed_cntr.h"
 #include "stdbool.h"
@@ -108,7 +109,7 @@ void speed_cntr_Move(signed int step, unsigned int accel, unsigned int decel, un
       srd.decel_val = accel_lim - step;
     }
     else{
-      srd.decel_val = -((long)max_s_lim*accel)/decel;
+      srd.decel_val = -(((long)(max_s_lim*accel))/decel);
     }
     // We must decelrate at least 1 step to stop.
     if(srd.decel_val == 0){
@@ -131,6 +132,18 @@ void speed_cntr_Move(signed int step, unsigned int accel, unsigned int decel, un
     srd.accel_count = 0;
     status.running = TRUE;
     OCR1A = 10;
+
+#if (0)
+    // dump speedRampData;
+    printf("srd.run_state = %d\n", srd.run_state);
+    printf("srd.dir = %d\n", srd.dir);
+    printf("srd.step_delay = %f\n", srd.step_delay * 2.17f / 1000000.0f);
+    printf("srd.decel_start = %d\n", srd.decel_start);
+    printf("srd.decel_val = %d\n", srd.decel_val);
+    printf("srd.min_delay = %f\n", srd.min_delay * 2.17f / 1000000.0f);
+    printf("srd.accel_count = %d\n", srd.accel_count);
+#endif
+
     // Set Timer/Counter to divide clock by 8
     TCCR1B |= ((0<<CS12)|(1<<CS11)|(0<<CS10));
   }
