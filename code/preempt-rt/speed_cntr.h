@@ -104,10 +104,11 @@ extern unsigned int OCR1A;	/* Output Compare Register */
 extern unsigned int TCCR1B;	/* Timer Counter Control Register */
 
 // Timer Counter Control Register bits */
-#define WGM12 (12)
-#define CS10 (1<<0)
-#define CS11 (1<<1)
-#define CS12 (1<<2)
+#define CS10 (0)
+#define CS11 (1)
+#define CS12 (2)
+#define WGM12 (3)
+
 
 extern unsigned int TIMSK1;	/* Output Compare A Match Interrupt enable */
 #define OCIE1A	(0)
