@@ -133,14 +133,16 @@ void speed_cntr_Move(signed int step, unsigned int accel, unsigned int decel, un
     status.running = TRUE;
     OCR1A = 10;
 
-#if (0)
+    srd.debug = -1;
+
+#if (1)
     // dump speedRampData;
     printf("srd.run_state = %d\n", srd.run_state);
     printf("srd.dir = %d\n", srd.dir);
-    printf("srd.step_delay = %f\n", srd.step_delay * 2.17f / 1000000.0f);
+    printf("srd.step_delay = %d\n", srd.step_delay);
     printf("srd.decel_start = %d\n", srd.decel_start);
     printf("srd.decel_val = %d\n", srd.decel_val);
-    printf("srd.min_delay = %f\n", srd.min_delay * 2.17f / 1000000.0f);
+    printf("srd.min_delay = %d\n", srd.min_delay);
     printf("srd.accel_count = %d\n", srd.accel_count);
 #endif
 
@@ -178,7 +180,7 @@ void speed_cntr_Init_Timer1(void)
 /* __interrupt */int speed_cntr_TIMER1_COMPA_interrupt( void )
 {
   // Holds next delay period.
-  unsigned int new_step_delay;
+  unsigned int new_step_delay, a, b;
   // Remember the last step delay used when accelrating.
   static int last_accel_delay;
   // Counting steps when moving.
@@ -199,7 +201,7 @@ void speed_cntr_Init_Timer1(void)
       status.running = FALSE;
       break;
 
-    case ACCEL:
+    case ACCEL:      
       /* sm_driver_StepCounter(srd.dir); */
       sm_driver_StepCounter=srd.dir;
       step_count++;
@@ -239,8 +241,8 @@ void speed_cntr_Init_Timer1(void)
       sm_driver_StepCounter=srd.dir;
       step_count++;
       srd.accel_count++;
-      new_step_delay = srd.step_delay - (((2 * (long)srd.step_delay) + rest)/(4 * srd.accel_count + 1));
-      rest = ((2 * (long)srd.step_delay)+rest)%(4 * srd.accel_count + 1);
+      new_step_delay = srd.step_delay + (((2 * (long)srd.step_delay) + rest)/(4 * abs(srd.accel_count) + 1));
+      rest = ((2 * (long)srd.step_delay)+rest)%(4 * abs(srd.accel_count) + 1);
       // Check if we at last step
       if(srd.accel_count >= 0){
         srd.run_state = STOP;

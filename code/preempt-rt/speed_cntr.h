@@ -35,9 +35,9 @@
  */
 typedef struct {
   //! What part of the speed ramp we are in.
-  unsigned char run_state : 3;
+  unsigned char run_state;
   //! Direction stepper motor should move.
-  unsigned char dir : 1;
+  unsigned char dir;
   //! Peroid of next timer delay. At start this value set the accelration rate.
   unsigned int step_delay;
   //! What step_pos to start decelaration
@@ -48,6 +48,7 @@ typedef struct {
   signed int min_delay;
   //! Counter used when accelerateing/decelerateing to calculate step_delay.
   signed int accel_count;
+  long debug, a, b, c;
 } speedRampData;
 
 /*! \Brief Frequency of timer1 in [Hz].
@@ -59,7 +60,7 @@ typedef struct {
 #define T1_FREQ 460750
 
 //! Number of (full)steps per round on stepper motor in use.
-#define FSPR 200
+#define FSPR 400 
 
 #define FULLSTEPS
 
@@ -102,13 +103,13 @@ int speed_cntr_TIMER1_COMPA_interrupt( void );
 extern struct GLOBAL_FLAGS status;
 extern unsigned int OCR1A;	/* Output Compare Register */
 extern unsigned int TCCR1B;	/* Timer Counter Control Register */
+extern speedRampData srd;
 
 // Timer Counter Control Register bits */
 #define CS10 (0)
 #define CS11 (1)
 #define CS12 (2)
 #define WGM12 (3)
-
 
 extern unsigned int TIMSK1;	/* Output Compare A Match Interrupt enable */
 #define OCIE1A	(0)
