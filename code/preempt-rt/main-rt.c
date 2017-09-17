@@ -25,9 +25,12 @@ struct GLOBAL_FLAGS status = {FALSE, FALSE, 0};
 #define ONE_TURN	(2*3.1416*100)
 
 // total step
-#define TOTAL_STEPS	(400*2)
+#define TOTAL_STEPS	(400*10)
+
+#ifdef DRAW_GRAPH
 struct timespec t[TOTAL_STEPS];
 int ocr1a[TOTAL_STEPS];
+#endif
 
 int running = true;
 int rt_thread_started = false;
@@ -99,6 +102,7 @@ void print_x(int n)
 
 }
 
+#ifdef DRAW_GRAPH
 void prepare_data()
 {
 	int n;
@@ -112,7 +116,7 @@ void prepare_data()
 		t[n] = result;	
 	}
 
-#if (1)
+#if (0)
 	for(n=1;n<(TOTAL_STEPS-1);n++){
 		printf("%04d: ", n);
 		print_x(t[n].tv_nsec/1000000);
@@ -130,6 +134,7 @@ void prepare_data()
 
 
 }
+#endif
 
 void *simple_cyclic_task(void *data)
 {
@@ -156,8 +161,10 @@ void *simple_cyclic_task(void *data)
 						break;
 					case CW:
 					case CCW:
+#ifdef DRAW_GRAPH
 						ocr1a[current_time] = OCR1A;
 						clock_gettime(CLOCK_MONOTONIC, &t[current_time]);
+#endif
 						current_time++;
 						total_step_count++;
 						break;
@@ -191,9 +198,9 @@ int main(int argc, char* argv[])
 
 	/* Move motor */
 	step = TOTAL_STEPS;
-	accel = (unsigned int)(0.5*ONE_TURN);
-	decel = (unsigned int)(0.5*ONE_TURN);
-	speed = (unsigned int)(0.5*ONE_TURN);
+	accel = (unsigned int)(0.4*ONE_TURN);
+	decel = (unsigned int)(0.4*ONE_TURN);
+	speed = (unsigned int)(1.0*ONE_TURN);
 	printf("speed_cntr_Move(%d, %d, %d, %d)\n",
 		step, accel, decel, speed);
 	speed_cntr_Move(step, accel, decel, speed);
@@ -271,8 +278,6 @@ int main(int argc, char* argv[])
 
 	printf("total_step_count = %d\n", total_step_count);
  
-	prepare_data();
-
 out:
 	// Clear permission bits of 4 ports starting from BASE
 	ioperm(BASE, 4, 0);
