@@ -21,11 +21,6 @@
 #ifndef SPEED_CNTR_H
 #define SPEED_CNTR_H
 
-// Direction of stepper motor movement
-#define NOACTION -1
-#define CW  0
-#define CCW 1
-
 
 /*! \brief Holding data used by timer interrupt for speed ramp calculation.
  *
@@ -48,7 +43,6 @@ typedef struct {
   signed int min_delay;
   //! Counter used when accelerateing/decelerateing to calculate step_delay.
   signed int accel_count;
-  long debug, a, b, c;
 } speedRampData;
 
 /*! \Brief Frequency of timer1 in [Hz].
@@ -61,8 +55,6 @@ typedef struct {
 
 //! Number of (full)steps per round on stepper motor in use.
 #define FSPR 400 
-
-#define FULLSTEPS
 
 #ifdef HALFSTEPS
   #define SPR (FSPR*2)

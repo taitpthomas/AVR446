@@ -21,7 +21,17 @@
 #ifndef SM_DRIVER_H
 #define SM_DRIVER_H
 
+// Parallel Port
+#define BASE 0x378
+
+#if (1)
+#define OUTB(a)	do { outb((a), BASE); } while (0)
+#else
+#define OUTB(a)
+#endif
+
 // Direction of stepper motor movement
+#define NOACT -1
 #define CW  0
 #define CCW 1
 
@@ -30,20 +40,18 @@
  * Either halfsteps (HALFSTEPS) or fullsteps (FULLSTEPS) are allowed.
  *
  */
-#define HALFSTEPS
-//#define FULLSTEPS
+//#define HALFSTEPS
+#define FULLSTEPS
 
 /*! \Brief Define IO port and pins
  *
  * Set the desired drive port and pins to support your device
  *
  */
-#define SM_PORT         PORTD
-#define SM_DRIVE        DDRD
-#define A1    PD7 //!< Stepper motor winding A positive pole.
-#define A2    PD6 //!< Stepper motor winding A negative pole.
-#define B1    PD5 //!< Stepper motor winding B positive pole.
-#define B2    PD4 //!< Stepper motor winding B negative pole.
+#define A1    3 //!< Stepper motor winding A positive pole.
+#define A2    2 //!< Stepper motor winding A negative pole.
+#define B1    1 //!< Stepper motor winding B positive pole.
+#define B2    0 //!< Stepper motor winding B negative pole.
 
 void sm_driver_Init_IO(void);
 unsigned char sm_driver_StepCounter(signed char inc);

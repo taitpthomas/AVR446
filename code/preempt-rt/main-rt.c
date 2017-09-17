@@ -15,19 +15,11 @@
 #include <signal.h>
 #include <stdbool.h>
 #include "global.h"
+#include "sm_driver.h"
 #include "speed_cntr.h"
 
 // Global status flags
 struct GLOBAL_FLAGS status = {FALSE, FALSE, 0};
-
-// Parallel Port
-#define BASE 0x378
-
-#if (1)
-#define OUTB(a)	do { outb((a), BASE); } while (0)
-#else
-#define OUTB(a)
-#endif
 
 // 2PI
 #define ONE_TURN	(2*3.1416*100)
@@ -144,7 +136,6 @@ void *simple_cyclic_task(void *data)
         struct period_info pinfo;
 	int count = 0;
 	int rc;
-	int step_width = 0;
 	int current_time = 0;
 	
 	printf("%s started\n", __FUNCTION__);	 
@@ -154,13 +145,6 @@ void *simple_cyclic_task(void *data)
 		/* Time/counter enabled */
 		if ((TCCR1B & (1<<CS11)) && (OCR1A > 0)){
 			count++;
-			/* reset step clock pin to zero */
-			if (step_width > 0){
-				step_width--;
-				if (step_width == 0){
-					OUTB(0);
-				}
-			}
 			/* timer/counter compare output */
 	                if (count >= OCR1A){
 				/* reset count */
@@ -168,7 +152,7 @@ void *simple_cyclic_task(void *data)
 				/* do realtime task */
 				rc = speed_cntr_TIMER1_COMPA_interrupt();
 				switch(rc){
-					case NOACTION:
+					case NOACT:
 						break;
 					case CW:
 					case CCW:
@@ -176,8 +160,6 @@ void *simple_cyclic_task(void *data)
 						clock_gettime(CLOCK_MONOTONIC, &t[current_time]);
 						current_time++;
 						total_step_count++;
-						OUTB(0xff);
-						step_width = 5;
 						break;
 				}
 			}
@@ -203,9 +185,8 @@ int main(int argc, char* argv[])
 	int step;
 	unsigned int accel, decel, speed;
 	int n;
-
 	
-	/* initialize, ie stop timer/counter */
+	/* initialize, ie stop timer/counter, must be init before speed_cntr_Move */
 	speed_cntr_Init_Timer1();
 
 	/* Move motor */
@@ -225,6 +206,9 @@ int main(int argc, char* argv[])
 		printf("ERROR: Could not set permissions on ports");
 		return 0;
 	}
+
+	/* initialize io port, must be init after parallel is initialized */
+	sm_driver_Init_IO();
 
 	/* ctrl-c handler */
 	signal(SIGINT, signalHandler);
@@ -286,7 +270,6 @@ int main(int argc, char* argv[])
                 printf("join pthread failed: %m\n");
 
 	printf("total_step_count = %d\n", total_step_count);
-	printf("debug = %d, %d, %d, %d,\n", srd.debug, srd.a, srd.b, srd.c);
  
 	prepare_data();
 

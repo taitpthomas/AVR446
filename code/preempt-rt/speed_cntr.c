@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "global.h"
+#include "sm_driver.h"
 #include "speed_cntr.h"
 #include "stdbool.h"
 
@@ -133,8 +134,6 @@ void speed_cntr_Move(signed int step, unsigned int accel, unsigned int decel, un
     status.running = TRUE;
     OCR1A = 10;
 
-    srd.debug = -1;
-
 #if (1)
     // dump speedRampData;
     printf("srd.run_state = %d\n", srd.run_state);
@@ -187,9 +186,8 @@ void speed_cntr_Init_Timer1(void)
   static unsigned int step_count = 0;
   // Keep track of remainder from new_step-delay calculation to incrase accurancy
   static unsigned int rest = 0;
-  // sm_driver_StepCounter: -1 noaction, 0 CW, 1 CCW
-  int sm_driver_StepCounter = NOACTION;
-
+  // return code
+  int rc = NOACT;
   OCR1A = srd.step_delay;
 
   switch(srd.run_state) {
@@ -201,9 +199,9 @@ void speed_cntr_Init_Timer1(void)
       status.running = FALSE;
       break;
 
-    case ACCEL:      
-      /* sm_driver_StepCounter(srd.dir); */
-      sm_driver_StepCounter=srd.dir;
+    case ACCEL:
+      rc = srd.dir;
+      sm_driver_StepCounter(srd.dir);
       step_count++;
       srd.accel_count++;
       new_step_delay = srd.step_delay - (((2 * (long)srd.step_delay) + rest)/(4 * srd.accel_count + 1));
@@ -223,8 +221,8 @@ void speed_cntr_Init_Timer1(void)
       break;
 
     case RUN:
-      /* sm_driver_StepCounter(srd.dir); */
-      sm_driver_StepCounter=srd.dir;
+      rc = srd.dir;
+      sm_driver_StepCounter(srd.dir); 
       step_count++;
       new_step_delay = srd.min_delay;
       // Chech if we should start decelration.
@@ -236,9 +234,9 @@ void speed_cntr_Init_Timer1(void)
       }
       break;
 
-    case DECEL:
-       /* sm_driver_StepCounter(srd.dir); */
-      sm_driver_StepCounter=srd.dir;
+    case DECEL: 
+      rc = srd.dir;
+      sm_driver_StepCounter(srd.dir); 
       step_count++;
       srd.accel_count++;
       new_step_delay = srd.step_delay + (((2 * (long)srd.step_delay) + rest)/(4 * abs(srd.accel_count) + 1));
@@ -250,7 +248,7 @@ void speed_cntr_Init_Timer1(void)
       break;
   }
   srd.step_delay = new_step_delay;
-  return sm_driver_StepCounter;
+  return rc;
 }
 
 /*! \brief Square root routine.
