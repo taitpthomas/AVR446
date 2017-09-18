@@ -25,7 +25,7 @@ struct GLOBAL_FLAGS status = {FALSE, FALSE, 0};
 #define ONE_TURN	(2*3.1416*100)
 
 // total step
-#define TOTAL_STEPS	(400*10)
+#define TOTAL_STEPS	(400*20)
 
 #ifdef DRAW_GRAPH
 struct timespec t[TOTAL_STEPS];
@@ -63,7 +63,10 @@ static void periodic_task_init(struct period_info *pinfo)
         /* pinfo->period_ns = 1000000; */
 
 	/* hardcoding a 2.17us = 2170 ns = 460.75khz */
-        pinfo->period_ns = 2170;
+        //pinfo->period_ns = 2170;
+        
+	/* 217000ns = 4.6khz */
+        pinfo->period_ns = 217000;
  
         clock_gettime(CLOCK_MONOTONIC, &(pinfo->next_period));
 }
@@ -200,7 +203,7 @@ int main(int argc, char* argv[])
 	step = TOTAL_STEPS;
 	accel = (unsigned int)(0.4*ONE_TURN);
 	decel = (unsigned int)(0.4*ONE_TURN);
-	speed = (unsigned int)(1.0*ONE_TURN);
+	speed = (unsigned int)(2.0*ONE_TURN);
 	printf("speed_cntr_Move(%d, %d, %d, %d)\n",
 		step, accel, decel, speed);
 	speed_cntr_Move(step, accel, decel, speed);
