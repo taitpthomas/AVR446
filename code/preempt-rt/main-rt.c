@@ -17,6 +17,7 @@
 #include "global.h"
 #include "sm_driver.h"
 #include "speed_cntr.h"
+#include "options.h"
 
 // Global status flags
 struct GLOBAL_FLAGS status = {FALSE, FALSE, 0};
@@ -24,17 +25,10 @@ struct GLOBAL_FLAGS status = {FALSE, FALSE, 0};
 // 2PI
 #define ONE_TURN	(2*3.1416*100)
 
-// total step
-#define TOTAL_STEPS	(400*20)
-
-#ifdef DRAW_GRAPH
-struct timespec t[TOTAL_STEPS];
-int ocr1a[TOTAL_STEPS];
-#endif
-
 int running = true;
 int rt_thread_started = false;
 int total_step_count = 0;
+int total_steps;
 
 void signalHandler(int sig)
 {
@@ -105,40 +99,6 @@ void print_x(int n)
 
 }
 
-#ifdef DRAW_GRAPH
-void prepare_data()
-{
-	int n;
-	struct timespec base_time;
-	struct timespec result;
-	base_time = t[0];
-	
-	for(n=0;n<(TOTAL_STEPS-1);n++){
-		/* result = stop - start */
-		timespec_diff(&t[n], &t[n+1], &result);
-		t[n] = result;	
-	}
-
-#if (0)
-	for(n=1;n<(TOTAL_STEPS-1);n++){
-		printf("%04d: ", n);
-		print_x(t[n].tv_nsec/1000000);
-		// printf("%04d,%d, %08dms\n", n, t[n].tv_sec, t[n].tv_nsec/1000000);
-	}
-#endif
-
-#if (0)
-	for(n=1;n<(TOTAL_STEPS-1);n++){
-		printf("%04d: ", n);
-		print_x(ocr1a[n]/400);
-		// printf("%04d,%d, %08dms\n", n, t[n].tv_sec, t[n].tv_nsec/1000000);
-	}
-#endif
-
-
-}
-#endif
-
 void *simple_cyclic_task(void *data)
 {
         struct period_info pinfo;
@@ -164,10 +124,6 @@ void *simple_cyclic_task(void *data)
 						break;
 					case CW:
 					case CCW:
-#ifdef DRAW_GRAPH
-						ocr1a[current_time] = OCR1A;
-						clock_gettime(CLOCK_MONOTONIC, &t[current_time]);
-#endif
 						current_time++;
 						total_step_count++;
 						break;
@@ -179,7 +135,7 @@ void *simple_cyclic_task(void *data)
 			count = 0 ;
 		}
                 wait_rest_of_period(&pinfo);
-		if (total_step_count >= TOTAL_STEPS)
+		if (total_step_count >= total_steps)
 			break;
         }
  
@@ -192,28 +148,44 @@ int main(int argc, char* argv[])
         pthread_attr_t attr;
         pthread_t thread;
         int ret;
-	int step;
 	unsigned int accel, decel, speed;
 	int n;
-	
+	struct motor_options p = { 
+		5.0, /* 5 turn */
+		1.0, /* accel = 1 turn/sec*sec */
+		1.0, /* decel = 1 turn/sec*sec */
+		1.0  /* speed = 1 turn/sec */
+	};
+
+	if (!get_motor_options(argc, argv, &p)){
+		exit (0);
+	}
+
+	printf("--------------------------------------------------\n");
+	printf(" Total number of turn : %4.4f \n", p.turn);
+	printf("         Acceleration : %4.4f turn/sec*sec\n", p.accel);
+	printf("        Decceleration : %4.4f turn/sec*sec\n", p.decel);
+	printf("                Speed : %4.4f turn/sec\n", p.speed);
+	printf("--------------------------------------------------\n");
+
 	/* initialize, ie stop timer/counter, must be init before speed_cntr_Move */
 	speed_cntr_Init_Timer1();
 
 	/* Move motor */
-	step = TOTAL_STEPS;
-	accel = (unsigned int)(0.4*ONE_TURN);
-	decel = (unsigned int)(0.4*ONE_TURN);
-	speed = (unsigned int)(2.0*ONE_TURN);
+	total_steps = (unsigned int)(p.turn * SPR);
+	accel = (unsigned int)(p.accel * ONE_TURN);
+	decel = (unsigned int)(p.decel * ONE_TURN);
+	speed = (unsigned int)(p.speed * ONE_TURN);
 	printf("speed_cntr_Move(%d, %d, %d, %d)\n",
-		step, accel, decel, speed);
-	speed_cntr_Move(step, accel, decel, speed);
+		total_steps, accel, decel, speed);
+	speed_cntr_Move(total_steps, accel, decel, speed);
 
 	/* initialize parallel port */
 	printf("Parallel Port Interface (Base: 0x%x)\n", BASE);
 	
 	// Set permission bits of 4 ports starting from BASE
 	if (ioperm(BASE, 4, 1) != 0){
-		printf("ERROR: Could not set permissions on ports");
+		printf("ERROR: Could not set permissions on ports\n");
 		return 0;
 	}
 
