@@ -34,6 +34,10 @@
 unsigned char SM_PORT = 0;
 unsigned char SM_DRIVE = 0;
 
+// step clock mode
+#define STEP_CLOCK_MODE	(1)
+#define CLOCK_PIN	(0)
+
 //! Table with control signals for stepper motor
 /*__flash*/ unsigned char steptab[] = {((1<<BIT_A1) | (0<<BIT_A2) | (0<<BIT_B1) | (0<<BIT_B2)),
                                        ((1<<BIT_A1) | (0<<BIT_A2) | (1<<BIT_B1) | (0<<BIT_B2)),
@@ -69,6 +73,11 @@ void sm_driver_Init_IO(void)
  */
 unsigned char sm_driver_StepCounter(signed char inc)
 {
+#ifdef STEP_CLOCK_MODE
+  SM_PORT = SM_PORT ^ (1<<CLOCK_PIN);
+  OUTB(SM_PORT);
+  return 1;
+#else
   // Counts 0-1-...-6-7 in halfstep, 0-2-4-6 in fullstep
   static unsigned char counter = 0;
   // Update
@@ -99,6 +108,7 @@ unsigned char sm_driver_StepCounter(signed char inc)
   counter &= 0x07;
   sm_driver_StepOutput(counter);
   return(counter);
+#endif /* STEP_CLOCK_MODE */
 }
 
 /*! \brief Convert the stepcounter value to signals for the stepper motor.

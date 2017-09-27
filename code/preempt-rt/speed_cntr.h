@@ -58,6 +58,7 @@ typedef struct {
 
 //! Number of (full)steps per round on stepper motor in use.
 #define FSPR 400 
+//#define FSPR 200 
 
 #ifdef HALFSTEPS
   #define SPR (FSPR*2)
